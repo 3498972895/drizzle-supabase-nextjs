@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Drizzle with Nextjs14 
 
-## Getting Started
+This article will show how to setup Drizzle in Nextjs FrameWork.
 
-First, run the development server:
+1) install nextjs
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx create-next-app@latest
+```
+after install nextjs14, we need to update the package.json because of react has compatible problems with drizzle in this nextjs version.
+
+```bash
+npm update --save
+npm update -D
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2) setup Supabase
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+We only use the Supabase to create an empty database named drizzle-nextjs-test
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+3) DATABASE_URL variable
 
-## Learn More
+Back to our project, We need write the DATABASE_URL variable into .env file in our root of project
 
-To learn more about Next.js, take a look at the following resources:
+The DATABASE_URL can be copied form our database we created before or you can follow the path I pointed blow:
+> chooose our databse, then click on the projectSettings from sidebar ->CONFIGURATION section(Database button)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+```txt
+DATABASE_URL="postgresql://postgres:[your_password]@db.qlwonwgdrdlavrrtaioy.supabase.co:5432/postgres"
+```
+Here, the drizzle only support the ***IPV6*** version link to connect supabase. And here you should notice that you only replace the password in this link and remove the '[]',do not change other sections
 
-## Deploy on Vercel
+Finally, write this in our .env file.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4) setup drizzle
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+1. create an db file for connecting database.
+
+We installed the extra packages except drizzle to make drizzle enable to find the environment variable using dotenv.
+
+
+> src/db/drizzle.ts
+```bash
+npm i drizzle-orm postgres
+npm i -D drizzle-kit
+npm i dotenv
+```
+```sql
+import 'dotenv/config';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+
+const client = postgres(process.env.DATABASE_URL!);
+export const db = drizzle(client);
+```
+2. create table using Drizzle instead of DDL
+
+we create a file for defining table structure
+
+> src/db/schema.ts
+```ts
+export const users= pgTable('users', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  age: integer('age').notNull(),
+  email: text('email').notNull().unique(),
+});
+
+```
+3. create drizzle.config.ts
+
+We create this file in the root of nextjs.
+
+```ts
+import 'dotenv/config';
+import { defineConfig } from 'drizzle-kit';
+export default defineConfig({
+  schema: './db/schema.ts',
+  out: "./supabase/migrations",
+  dialect: 'postgresql',
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+});
+```
+4. finally push table in our supabase
+
+```bash
+npx drizzle-kit migrate
+```
+generating the sql file when using 'out' property in drizzle.config.ts when you needed.
+
+
+then push schema into our database
+```sql
+npx drizzle-kit push
+```
+
+5) query and opeations
+
+Now you can use query fuctions from drizzle like:
+```ts
+db.select().form(users)
+```
+But you also need follow the rules of server and client components in nextjs.
