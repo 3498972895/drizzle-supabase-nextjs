@@ -87,7 +87,7 @@ export default defineConfig({
 4. finally push table in our supabase
 
 ```bash
-npx drizzle-kit migrate
+npx drizzle-kit generate
 ```
 generating the sql file when using 'out' property in drizzle.config.ts when you needed.
 
